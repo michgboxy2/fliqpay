@@ -5,7 +5,8 @@ import { User } from "../auth/userModel";
 import format from "date-fns/format";
 import { subDays } from "date-fns";
 import { createWriteStream } from "fs";
-import { json2csv } from "json-2-csv";
+import { Parser } from "json2csv";
+import fs from "fs";
 
 export const createTicket = async (
   req: Request,
@@ -132,6 +133,9 @@ export const getClosedTickets = async (req: Request, res: Response) => {
 
 export const downloadCSV = async (req: Request, res: Response) => {
   try {
+    const fields = ["id", "issue", "ticketStatus", "created", "user"];
+    const opts = { fields };
+
     const lastReportDate = format(new Date(), "yyyy-MM-dd");
     const formattedReportDate = subDays(new Date(lastReportDate), 30);
     const tickets = await Ticket.find({
@@ -142,59 +146,20 @@ export const downloadCSV = async (req: Request, res: Response) => {
       },
     }).populate("user");
 
-    let ticketArray = [];
+    const parser = new Parser(opts);
+    const csv = parser.parse(tickets);
 
-    tickets.map((ticket) => ticketArray.push({}));
+    let writestream = fs.createWriteStream("report.csv");
+    writestream.write(csv);
 
-    const todos = [
-      {
-        id: 1,
-        title: "delectus aut autem",
-        completed: false,
-      },
-      {
-        id: 2,
-        title: "quis ut nam facilis et officia qui",
-        completed: false,
-      },
-      {
-        id: 3,
-        title: "fugiat veniam minus",
-        completed: false,
-      },
-    ];
+    writestream.on("finish", function () {
+      console.log("file has been written");
+      res.download(process.cwd() + "/report.csv");
+    });
 
-    if (tickets) {
-      json2csv(tickets, (err, csv) => {
-        if (err) {
-          throw err;
-        }
-
-        // print CSV string
-        // console.log(csv);
-      });
-    }
-
-    // json2csv(tickets, (err: any, csv: any): any => {
-    //   if (err) {
-    //   }
-    //   // console.log(csv);
-    // });
-
-    // console.log(tickets);
-
-    // let writestream = createWriteStream("report.csv");
-
-    // writestream.write(tickets);
-
-    // writestream.on("finish", function () {
-    //   console.log("file has been written");
-    // });
-
-    // writestream.end();
+    writestream.end();
 
     // res.download(process.cwd() + "/report.csv");
-    res.send(tickets);
   } catch (err) {
     return res.status(400).send({ message: "something went wrong" });
   }

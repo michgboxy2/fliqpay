@@ -1,0 +1,22 @@
+version: "3.6"
+
+services:
+  fliqpay-api:
+    container_name: backend
+    build: ./
+    command: npm start
+    working_dir: /usr/src/fliqpay
+    environment:
+      MONGO_URI: "mongodb://mongo:27017/ticket"
+    links:
+      - mongo
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./:/usr/src/fliqpay
+
+  #mongo
+  mongo:
+    image: mongo
+    ports:
+      - "27017:27017"

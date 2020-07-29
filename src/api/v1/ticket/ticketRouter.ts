@@ -29,7 +29,7 @@ router
 router.route("/report").get(currentUser, requireAuth, getClosedTickets);
 
 router.route("/all").get(getAllTickets);
-router.route("/download").get(currentUser, requireAuth, downloadCSV);
+router.route("/download").get(downloadCSV);
 
 router
   .route("/:ticketId")
