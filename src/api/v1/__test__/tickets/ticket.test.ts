@@ -20,6 +20,16 @@ it("returns a status other than 403 if the user is signed in", async () => {
   expect(response.status).not.toEqual(401);
 });
 
+it("returns a list of all closed tickets in the last 30 days", async () => {
+  const cookie = global.signin();
+
+  await request(app)
+    .get(`/api/tickets/report`)
+    .set("Cookie", cookie)
+    .send()
+    .expect(200);
+});
+
 it("returns an error when an issue is not provided", async () => {
   await request(app)
     .post("/api/tickets")
@@ -61,11 +71,16 @@ it("returns a 404 if the ticket is not found", async () => {
 
 it("returns the ticket if the ticket is found", async () => {
   const issue = "new complaint";
-  const cookie = global.signin();
+
+  let testUser = await request(app).post("/api/users/signup").send({
+    email: "user@test.com",
+    password: "password",
+    role: "user",
+  });
 
   const response = await request(app)
     .post("/api/tickets")
-    .set("Cookie", cookie)
+    .set("Cookie", testUser.get("Set-Cookie"))
     .send({
       issue,
     })
@@ -73,25 +88,62 @@ it("returns the ticket if the ticket is found", async () => {
 
   const ticketResponse = await request(app)
     .get(`/api/tickets/${response.body.id}`)
-    .set("Cookie", cookie)
+    .set("Cookie", testUser.get("Set-Cookie"))
     .send()
     .expect(200);
 
   expect(ticketResponse.body.issue).toEqual(issue);
 });
 
-it("updates a ticket status", async () => {
-  const cookie = global.signin();
+it("doesn't allow anyone that isn't support or admin to update ticket status", async () => {
+  //create test user
+  let testUser = await request(app).post("/api/users/signup").send({
+    email: "user@test.com",
+    password: "password",
+    role: "user",
+  });
+
+  //create ticket
   const response = await request(app)
     .post(`/api/tickets`)
-    .set("Cookie", cookie)
+    .set("Cookie", testUser.get("Set-Cookie"))
+    .send({
+      issue: "random ticket",
+    });
+
+  //update ticket
+  await request(app)
+    .patch(`/api/tickets/${response.body.id}`)
+    .set("Cookie", testUser.get("Set-Cookie"))
+    .send()
+    .expect(401);
+});
+
+it("updates a ticket status", async () => {
+  //create test user
+  let testUser = await request(app).post("/api/users/signup").send({
+    email: "user@test.com",
+    password: "password",
+    role: "user",
+  });
+
+  //create support ticket
+  let supportUser = await request(app).post("/api/users/signup").send({
+    email: "support@test.com",
+    password: "password",
+    role: "support",
+  });
+
+  const response = await request(app)
+    .post(`/api/tickets`)
+    .set("Cookie", testUser.get("Set-Cookie"))
     .send({
       issue: "random ticket",
     });
 
   await request(app)
     .patch(`/api/tickets/${response.body.id}`)
-    .set("Cookie", cookie)
+    .set("Cookie", supportUser.get("Set-Cookie"))
     .send({
       status: "closed",
     })
@@ -99,9 +151,35 @@ it("updates a ticket status", async () => {
 
   const ticketResponse = await request(app)
     .get(`/api/tickets/${response.body.id}`)
-    .set("Cookie", cookie)
+    .set("Cookie", testUser.get("Set-Cookie"))
     .send()
     .expect(200);
 
   expect(ticketResponse.body.ticketStatus).toEqual("closed");
+});
+
+it("disallows deletion of ticket if not admin", async () => {
+  const cookie = global.signin();
+  const ticket = await request(app)
+    .post(`/api/tickets`)
+    .set("Cookie", cookie)
+    .send({
+      issue: "random ticket",
+    });
+
+  await request(app)
+    .delete(`/api/tickets/user/${ticket.body.id}`)
+    .set("Cookie", cookie)
+    .send()
+    .expect(401);
+
+  await request(app)
+    .get(`api/v1/tickets/`)
+    .set("Cookie", cookie)
+    .send()
+    .expect(404);
+
+  let response = await Ticket.findById(ticket.body.id);
+
+  expect(response?.issue).toBe("random ticket");
 });

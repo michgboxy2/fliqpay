@@ -4,7 +4,6 @@ import { UserRoles } from "../services/userRoles";
 import { User } from "../auth/userModel";
 import format from "date-fns/format";
 import { subDays } from "date-fns";
-import { createWriteStream } from "fs";
 import { Parser } from "json2csv";
 import fs from "fs";
 
@@ -62,12 +61,16 @@ export const getTicketStatus = async (req: Request, res: Response) => {
     const ticket = await Ticket.findById(req.params.ticketId);
     const user = await User.findById(req.currentUser!.id);
 
+    if (!user) {
+      return res.status(404).send({ message: "user not found" });
+    }
+
     if (!ticket) {
       return res.status(404).send({ message: "ticket not found" });
     }
 
     if (user?.role === UserRoles.User) {
-      if (ticket.user !== req.currentUser!.id) {
+      if (ticket.user != req.currentUser!.id) {
         return res.status(400).send({ message: "You're not authorized" });
       }
     }
@@ -158,8 +161,21 @@ export const downloadCSV = async (req: Request, res: Response) => {
     });
 
     writestream.end();
+  } catch (err) {
+    return res.status(400).send({ message: "something went wrong" });
+  }
+};
 
-    // res.download(process.cwd() + "/report.csv");
+export const deleteTicket = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const ticket = await Ticket.findByIdAndDelete(id);
+
+    if (!ticket) {
+      return res.status(404).send({ message: "no ticket found" });
+    }
+
+    res.send(ticket);
   } catch (err) {
     return res.status(400).send({ message: "something went wrong" });
   }

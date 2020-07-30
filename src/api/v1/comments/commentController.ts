@@ -139,6 +139,10 @@ export const deleteComment = async (req: Request, res: Response) => {
 
     let comment = await Comment.findByIdAndDelete(id);
 
+    if (!comment) {
+      return res.status(404).send({ message: "No comment found" });
+    }
+
     res.send(comment);
   } catch (e) {
     return res.status(400).send({ message: "something went wrong" });

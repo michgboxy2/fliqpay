@@ -14,6 +14,30 @@ export const requireAuth = (
   next();
 };
 
+export const OrganizationAccess = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    if (!req.currentUser) {
+      return res.status(401).send({ message: "you are not signed in" });
+    }
+
+    let user = await User.findById(req.currentUser.id);
+
+    if (user?.role === UserRoles.User) {
+      return res
+        .status(401)
+        .send({ message: "customers are not allowed to perform this role" });
+    }
+
+    next();
+  } catch (err) {
+    return res.status(400).send({ message: "something went wrong" });
+  }
+};
+
 export const checkIfAdmin = async (
   req: Request,
   res: Response,

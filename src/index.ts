@@ -4,13 +4,21 @@ import { app } from "./server/server";
 
 dotenv.config();
 
+const {
+  JWT_KEY,
+  MONGO_USERNAME,
+  MONGO_PASSWORD,
+  MONGO_URI,
+  MONGO_PORT,
+} = process.env;
+
 const start = async () => {
   if (!process.env.JWT_KEY) {
     throw new Error("JWT_KEY must be defined");
   }
   try {
     await mongoose.connect(
-      "mongodb://username:password1@ds121331.mlab.com:21331/tickets",
+      `mongodb://${MONGO_USERNAME}:${MONGO_PASSWORD}@${MONGO_URI}:${MONGO_PORT}/tickets`,
       {
         useNewUrlParser: true,
         useUnifiedTopology: true,

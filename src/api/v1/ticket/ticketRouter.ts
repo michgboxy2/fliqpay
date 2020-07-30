@@ -9,8 +9,13 @@ import {
   getAllTickets,
   getClosedTickets,
   downloadCSV,
+  deleteTicket,
 } from "./ticketController";
-import { requireAuth } from "../middlewares/require-auth";
+import {
+  requireAuth,
+  checkIfAdmin,
+  OrganizationAccess,
+} from "../middlewares/require-auth";
 import { currentUser } from "../middlewares/decodeToken";
 
 const router = express.Router();
@@ -31,9 +36,17 @@ router.route("/report").get(currentUser, requireAuth, getClosedTickets);
 router.route("/all").get(getAllTickets);
 router.route("/download").get(downloadCSV);
 
+router.route("/user/:id").delete(currentUser, checkIfAdmin, deleteTicket);
+
 router
   .route("/:ticketId")
   .get(currentUser, requireAuth, getTicketStatus)
-  .patch(currentUser, requireAuth, updateTicketStatus);
+  .patch(
+    currentUser,
+    OrganizationAccess,
+    [body("status").not().isEmpty().withMessage("ticket status is required")],
+    validateRequest,
+    updateTicketStatus
+  );
 
 export { router as ticketRouter };
