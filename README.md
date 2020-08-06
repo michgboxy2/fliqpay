@@ -1,4 +1,5 @@
-A customer support ticketing application. 
+Fliqpay is a customer support ticket booking application built with Nodejs, Express, Typescript, Jest, Supertest, Mocha
+
 
 Clone the repository
 
