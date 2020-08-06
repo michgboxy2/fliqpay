@@ -1,3 +1,5 @@
+A customer support ticketing application. 
+
 Clone the repository
 
 RUN "npm install"
